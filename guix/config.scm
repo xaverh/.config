@@ -26,45 +26,13 @@
   "Return a nonfree license object."
   (license "nonfree" uri #f))
 
-(define (linux-url version)
-  "Return a URL for Linux VERSION."
-  (string-append "mirror://kernel.org"
-                 "/linux/kernel/v" (version-major version) ".x"
-                 "/linux-" version ".tar.xz"))
-
-(define-public (nonguix-extra-linux-options linux-or-version)
-  "Return a list containing additional options that nonguix sets by default
-for a corrupted linux package of specified version."
-  (define linux-version
-    (if (package? linux-or-version)
-        (package-version linux-or-version)
-        linux-or-version))
-
-  (reverse (fold (λ (opt opts)
-                   (if (version>=? linux-version (car opt))
-                       (cons* (cdr opt) opts)
-                       opts))
-                 '()
-                 '(
-                   ;; Driver for MT7612U-based wireless USB 3.0 dongles.
-                   ("3.10" . "CONFIG_MT76x2U=m")
-                   ;; Enable support for CIK (Sea Islands) asics
-                   ("3.10" . "CONFIG_DRM_AMDGPU_CIK=y")
-                   ("3.10" . "CONFIG_DRM_AMDGPU_SI=y")
-                   ;; Driver for MediaTek mt7921e wireless chipset
-                   ("5.15" . "CONFIG_MT7921E=m")
-                   ;; Activate driver module for RT1318/RT713 (Lunar Lake)
-                   ("6.12" . "CONFIG_SND_SOC_INTEL_USER_FRIENDLY_LONG_NAMES=y")
-                   ("6.12" . "CONFIG_SND_SOC_INTEL_SOUNDWIRE_SOF_MACH=m")))))
-
-(define* (corrupt-linux freedo
-                        #:key
-                        (name "linux")
-                        (configs "")
-                        (defconfig "nonguix_defconfig")
-                        (get-extra-configs nonguix-extra-linux-options)
-                        modconfig)
-  ;; TODO: This very directly depends on guix internals.
+(define linux
+  (let ((freedo linux-libre)
+        (name "linux")
+        (configs "")
+        (defconfig "nonguix_defconfig")
+        (modconfig #f))
+;; TODO: This very directly depends on guix internals.
   (define gexp-inputs (@@ (guix gexp) gexp-inputs))
   (define linux-srcarch
     (@@ (gnu packages linux) linux-srcarch))
@@ -83,7 +51,9 @@ for a corrupted linux package of specified version."
           '()
           inputs))
   (let* ((version (package-version freedo))
-         (url (linux-url version))
+         (url (string-append "mirror://kernel.org"
+                            "/linux/kernel/v" (version-major version) ".x"
+                            "/linux-" version ".tar.xz"))
          (pristine-source (package-source freedo))
          (inputs (map gexp-input-thing (extract-gexp-inputs pristine-source)))
          (sources (extract-sources inputs))
@@ -111,7 +81,23 @@ for a corrupted linux package of specified version."
                                      #$(linux-srcarch))))
                         (apply (assoc-ref #$phases 'configure) args)
                         (modify-defconfig
-                         ".config" '#$(get-extra-configs this-package))
+                         ".config" '#$(let ((linux-version (package-version this-package)))
+                                        (reverse (fold (λ (opt opts)
+                                                         (if (version>=? linux-version (car opt))
+                                                             (cons* (cdr opt) opts)
+                                                             opts))
+                                                       '()
+                                                       '(
+                                                         ;; Driver for MT7612U-based wireless USB 3.0 dongles.
+                                                         ("3.10" . "CONFIG_MT76x2U=m")
+                                                         ;; Enable support for CIK (Sea Islands) asics
+                                                         ("3.10" . "CONFIG_DRM_AMDGPU_CIK=y")
+                                                         ("3.10" . "CONFIG_DRM_AMDGPU_SI=y")
+                                                         ;; Driver for MediaTek mt7921e wireless chipset
+                                                         ("5.15" . "CONFIG_MT7921E=m")
+                                                         ;; Activate driver module for RT1318/RT713 (Lunar Lake)
+                                                         ("6.12" . "CONFIG_SND_SOC_INTEL_USER_FRIENDLY_LONG_NAMES=y")
+                                                         ("6.12" . "CONFIG_SND_SOC_INTEL_SOUNDWIRE_SOF_MACH=m"))))))
                         (invoke "make" "savedefconfig")
                         (rename-file "defconfig" defconfig)))))))))
         #:source (origin
@@ -127,9 +113,7 @@ for a corrupted linux package of specified version."
       (description
        "The unmodified Linux kernel, including nonfree blobs, for running Guix System
 on hardware which requires nonfree software to function."))))
-
-(define linux
-  (corrupt-linux linux-libre))
+)
 
 (define linux-firmware
   (package
@@ -241,38 +225,35 @@ hardware in the Linux kernel.")
   "Build INITRD, extended to include x86 processor microcode from
 MICROCODE-PACKAGES."
   (let ((args (strip-keyword-arguments '(#:initrd #:microcode-packages) rest)))
-    (combined-initrd (microcode-initrd* microcode-packages)
+    (combined-initrd (let ()
+                       (define builder
+                         (with-imported-modules (source-module-closure
+                                                 '((gnu build linux-initrd)
+                                                   (guix build utils))
+                                                 #:select? import-microcode-module?)
+                           #~(begin
+                               (use-modules (gnu build linux-initrd)
+                                            (guix build utils)
+                                            (ice-9 binary-ports))
+                               #$(concatenate-files-gexp)
+                               (let* ((initrd (string-append #$output "/initrd.cpio"))
+                                      (dest-dir "kernel/x86/microcode")
+                                      (intel-bin (string-append dest-dir "/GenuineIntel.bin")))
+                                 (mkdir-p dest-dir)
+                                 (for-each
+                                  (λ (package)
+                                    (let ((intel-ucode (string-append package
+                                                                      "/lib/firmware/intel-ucode")))
+                                      (when (directory-exists? intel-ucode)
+                                        (concatenate-files (find-files intel-ucode ".*")
+                                                           intel-bin)))))
+                                  '#$microcode-packages)
+                                 (mkdir-p #$output)
+                                 (write-cpio-archive initrd "kernel" #:compress? #f)))))
+                       (file-append (computed-file "microcode-initrd" builder)
+                                    "/initrd.cpio"))
                      (apply initrd file-systems
                             args))))
-
-(define (microcode-initrd* microcode-packages)
-  "Build an uncompressed initrd containing x86 processor microcode."
-  (define builder
-    (with-imported-modules (source-module-closure
-                            '((gnu build linux-initrd)
-                              (guix build utils))
-                            #:select? import-microcode-module?)
-      #~(begin
-          (use-modules (gnu build linux-initrd)
-                       (guix build utils)
-                       (ice-9 binary-ports))
-          #$(concatenate-files-gexp)
-          (let* ((initrd (string-append #$output "/initrd.cpio"))
-                 (dest-dir "kernel/x86/microcode")
-                 (intel-bin (string-append dest-dir "/GenuineIntel.bin")))
-            (mkdir-p dest-dir)
-            (for-each
-             (λ (package)
-               (let ((intel-ucode (string-append package
-                                                 "/lib/firmware/intel-ucode")))
-                 (when (directory-exists? intel-ucode)
-                   (concatenate-files (find-files intel-ucode ".*")
-                                      intel-bin)))))
-             '#$microcode-packages)
-            (mkdir-p #$output)
-            (write-cpio-archive initrd "kernel" #:compress? #f)))))
-  (file-append (computed-file "microcode-initrd" builder)
-               "/initrd.cpio"))
 
 (define (combined-initrd . initrds)
   "Return a combined initrd by concatenating INITRDS."
@@ -456,7 +437,8 @@ Terminal=false
        (list glibc
              (list gcc "lib")
              gtk+ gtk+-2 pango cairo freetype fontconfig
-             dbus pulseaudio alsa-lib mesa libx11 libxtst libxcomposite libxdamage
+             dbus pulseaudio alsa-lib mesa
+             libx11 libxtst libxcomposite libxdamage
              libxext libxfixes libxrender))
       (native-inputs
        (list tar xz patchelf coreutils))
@@ -544,3 +526,5 @@ Terminal=false
                          (device (uuid "A176-94B5"
                                        'fat32))
                          (type "vfat")) %base-file-systems)))
+
+
