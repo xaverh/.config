@@ -177,17 +177,6 @@ hardware in the Linux kernel.")
       (string-append "https://git.kernel.org/pub/scm/linux/kernel/git/"
                      "firmware/linux-firmware.git/plain/WHENCE")))))
 
-(define (select-firmware keep)
-  "Modify linux-firmware copy list to retain only files matching KEEP regex."
-  #~(λ _
-      (use-modules (ice-9 regex))
-      (substitute* "WHENCE"
-        (("^(File|RawFile): *([^ ]*)(.*)" _ type file rest)
-         (string-append (if (string-match #$keep file) type "Skip") ": " file rest))
-        (("^Link: *(.*) *-> *(.*)" _ file target)
-         (string-append (if (string-match #$keep target) "Link" "Skip")
-                        ": " file " -> " target)))))
-
 (define intel-microcode
   (package
     (name "intel-microcode")
@@ -216,24 +205,6 @@ hardware in the Linux kernel.")
     (synopsis "Processor microcode firmware for Intel CPUs")
     (description "Updated system processor microcode for Intel processors.")
     (license (nonfree "file://license"))))
-
-(define amd-microcode
-  (package
-    (inherit linux-firmware)
-    (name "amd-microcode")
-    (arguments
-     (cons* #:license-file-regexp "LICENSE.amd-ucode"
-            (substitute-keyword-arguments (package-arguments linux-firmware)
-              ((#:phases phases #~%standard-phases)
-               #~(modify-phases #$phases
-                   (add-after 'unpack 'select-firmware
-                     #$(select-firmware "^amd-ucode/")))))))
-    (synopsis "Processor microcode firmware for AMD CPUs")
-    (description "Updated system processor microcode for AMD x86-64 processors.")
-    (license
-     (nonfree
-      (string-append "https://git.kernel.org/pub/scm/linux/kernel/git/"
-                     "firmware/linux-firmware.git/plain/LICENSE.amd-ucode")))))
 
 ;; Only import Guix/GNU modules; exclude the one that pulls in (gcrypt hash)
 (define (import-microcode-module? module)
@@ -264,8 +235,7 @@ hardware in the Linux kernel.")
 (define* (microcode-initrd file-systems
                            #:key
                            (initrd base-initrd)
-                           (microcode-packages (list amd-microcode
-                                                     intel-microcode))
+                           (microcode-packages (list intel-microcode))
                            #:allow-other-keys
                            #:rest rest)
   "Build INITRD, extended to include x86 processor microcode from
@@ -289,22 +259,15 @@ MICROCODE-PACKAGES."
           #$(concatenate-files-gexp)
           (let* ((initrd (string-append #$output "/initrd.cpio"))
                  (dest-dir "kernel/x86/microcode")
-                 (amd-bin   (string-append dest-dir "/AuthenticAMD.bin"))
                  (intel-bin (string-append dest-dir "/GenuineIntel.bin")))
             (mkdir-p dest-dir)
             (for-each
              (λ (package)
                (let ((intel-ucode (string-append package
-                                                 "/lib/firmware/intel-ucode"))
-                     (amd-ucode (string-append package
-                                               "/lib/firmware/amd-ucode")))
+                                                 "/lib/firmware/intel-ucode")))
                  (when (directory-exists? intel-ucode)
                    (concatenate-files (find-files intel-ucode ".*")
-                                      intel-bin))
-                 (when (directory-exists? amd-ucode)
-                   (concatenate-files (find-files amd-ucode
-                                                  "^microcode_amd.*\\.bin$")
-                                      amd-bin))))
+                                      intel-bin)))))
              '#$microcode-packages)
             (mkdir-p #$output)
             (write-cpio-archive initrd "kernel" #:compress? #f)))))
