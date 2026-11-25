@@ -1,0 +1,441 @@
+# TODO: convert to infostore
+SetEnv	FVWM_TERMINAL          "zutty"
+SetEnv	FVWM_TERMINAL_EXEC_CMD "-c"
+SetEnv FVWM_DESKTOP_UPPERBOUND 2
+EwmhNumberOfDesktops 3 0
+DesktopName 0 🌐
+DesktopName 1 ☕
+DesktopName 2 👾
+DesktopName 3 🧠
+DesktopName 4 🥑
+DesktopName 5 🍓
+DesktopName 6 🎲
+DesktopName 7 🎰
+DesktopName 8 🎱
+DesktopName 9 🏜️
+DesktopName 10 🦄
+DesktopSize 2x2
+ClickTime 250
+MoveThreshold 3
+EdgeScroll 10 10
+EdgeResistance 2
+EdgeThickness 2
+OpaqueMoveSize unlimited
+Style * ResizeOpaque, \
+	SnapAttraction 5 SameType ScreenAll, \
+	SnapGrid, \
+	DecorateTransient, \
+	StackTransientParent, \
+	WindowShadeScrolls, \
+	WindowShadeSteps 10, \
+	!Icon, \
+	EdgeMoveResistance 2, \
+	EdgeMoveDelay 128, \
+	EdgeResizeDelay -1, \
+	ClickToFocus, \
+	FPFocusByFunctionWarpPointer, \
+	!FPGrabFocusTransient, \
+	FPReleaseFocusTransient, \
+        Colorset 1, \
+        HilightColorset 2, \
+	MWMButtons, \
+	FvwmBorder, \
+	FirmBorder, \
+	HandleWidth 1, \
+	MinOverlapPercentPlacement
+	# !UsePPosition
+# Click/release must occur in <n milliseconds to be a "click"
+ClickTime 10
+# Always use solid window moving
+OpaqueMoveSize -1
+# Window placement
+Style "*" DumbPlacement
+# border width 7 seems to be a good approximation of 4dwm,
+# althought fvwm doesn't do the nice 4dwm dither of the 3d bevels.
+Style "*" BorderWidth 7, HandleWidth 7
+# FVWM
+Style *             Title, Handles, !MWMFunctions, MWMButtons, NoDecorHint, Lenience, DecorateTransient
+Style "Fvwm*"		NoTitle, Sticky, WindowListSkip, NoHandles, BorderWidth 7
+Style "FvwmPager"             Title, Handles, !MWMFunctions, NoDecorHint, Lenience
+# various apps
+Style "xload"		NoTitle, Sticky, WindowListSkip, NoHandles, FPLenient, BorderWidth 7
+Style "*lock"		NoTitle, Sticky, WindowListSkip, NoHandles, BorderWidth 7
+Style "stalonetray"		NoTitle, Sticky, WindowListSkip, NoHandles, BorderWidth 7
+Style "audacious"		NoTitle, Sticky, NoHandles, BorderWidth 0
+Style "Chromium"        Title, Handles, !MWMFunctions, NoDecorHint
+Style "Wine"         Title, Handles, !MWMFunctions, NoDecorHint
+Style "Panther"         NoTitle, Sticky, NoHandles, BorderWidth 7, PositionPlacement center, NoPPosition, NoUSPosition
+Style "Onboard" NeverFocus
+# SGI-Style "flat" window buttons, close/minimize/maximize
+# These are ripped from somewhere on the net, I wish I remember from where and could give credit.
+ButtonStyle 2 Vector 9 0+5px100-6p@3 100-7px100-6p@3 100-7px-0+4p@3 0+5px0+4p@3 0+5px100-5p@3 0+7px100-5p@2 0+8px100-5p@3 100-6px100-5p@3 100-6px-0+6p@3
+ButtonStyle 4 Vector 9 50-2px50+1p@3 50+2px50+1p@3 50+2px50-3p@3 50-2px50-3p@3 50-2px50+2p@3 50-0px50+2p@2 50-0px50+2p@3 50+3px50+2p@3 50+3px50-1p@3
+ButtonStyle 1 Vector 9 0+4px50+1p@3 100-6px50+1p@3 100-6px50-2p@3 0+4px50-2p@3 0+4px50+2@3 0+5px50+2p@2 0+6px50+2p@2 100-5px50+2p@3 100-5px50@3
+WindowFont              "-*-helvetica-bold-o-*-*-14-*-*-*-*-*-*"
+TitleStyle LeftJustified
+TitleStyle Height 23
+# Generic menu style
+MenuStyle Mwm
+MenuStyle "*" Font -*-helvetica-bold-o-*-*-12-*-*-*-*-*-*
+############################################################################
+# Window handling functions
+############################################################################
+AddToFunc Move-or-Raise		"I" Raise
++				"M" Move
++				"D" Lower
+AddToFunc Move-or-Raise2        "M" Raise
++				"M" Move
++				"D" Lower
+AddToFunc Resize-or-Raise       "I" Raise
++                               "M" Resize
++                               "D" Lower
+AddToFunc Resize-or-Raise2      "M" Raise
++                               "M" Resize
++                               "D" Lower
+AddToFunc PrintFunction         "I" Raise
++                               "I" Exec xdpr -id $w
+AddToFunc Iconify-and-Raise     "I" Iconify
++                               "I" Raise
+AddToFunc Maximize-or-Move
+ + D Maximize
+ + I Raise
+ + C Focus
+ + M Move
+############################################################################
+# Window operations menus
+############################################################################
+# Menu for window operations
+AddToMenu Window-Ops
+	+ "  Select a window to...  "    Title
+	+ "Move "          Move-or-Raise2
+	+ "Resize "        Resize-or-Raise2
+	+ "Raise "         Raise
+	+ "Lower "         Lower
+	+ "(De)Iconify "   Iconify
+	+ "(Un)Stick "     Stick
+	+ "(Un)Maximize "  Maximize
+	+ ""              Nop
+	+ "Delete "        Delete
+	+ "Close "         Close
+	+ "Destroy "       Destroy
+	+ ""              Nop
+	+ "Identify"            Module FvwmIdent
+	+ "Refresh Screen " Refresh
+# Menu for top left hand ("close") button on windows
+AddToMenu Window-Ops2
+	+			"Raise/Lower "   RaiseLower
+	+                       "Iconify "       Iconify
+	+                       "(Un)Stick "     Stick
+	+                       ""              Nop
+	+                       "Delete "        Delete
+	+                       "Close "         Close
+	+                       "Destroy "       Destroy
+# add more apps with the syntax `+ "Label" <command> &`...
+#------- "System" menu ------------#
+AddToMenu SysMenu
+	+	"File Manager"	Exec exec exo-open --launch FileManager
+	Test (x pavucontrol)  +	"PulseAudio Control Panel" Exec exec pavucontrol
+	Test (x alsamixer)    +	"ALSA Mixer" Exec exec $FVWM_TERMINAL $FVWM_TERMINAL_EXEC_CMD alsamixer
+	+	"" 			Nop
+	+	"Restart FVWM"	Restart fvwm2
+	+ 	"Exit"		Popup ExitMenu
+#------- "Exit" menu ------------#
+# suspend assumes you're using systemd
+AddToMenu ExitMenu
+	+ 	"Log Out"		Popup QuitMenu
+	+	"Suspend"	Exec systemctl suspend
+	+	"Shut Down"	Exec poweroff
+	+	"Reboot"	Exec reboot
+#------- Confirm quitting X ------------#
+AddToMenu QuitMenu "Really quit?" Title
+	+   "Yeah" Quit
+	+   "No"  Nop
+#------- "Internet" menu ------------#
+AddToMenu SurfMenu
+	+	"Web Browser"	exec exo-open --launch WebBrowser
+## Various utilities and applications menu
+AddToMenu UtilsMenu
+	Test (x galculator)	    +   "Calculator"            exec galculator &
+	Test (x qalculate-gtk)	+   "Scientific Calculator" exec qalculate-gtk &
+## Graphics programs menu
+AddToMenu GfxMenu
+	Test (x gimp) +	"GIMP"		exec gimp &
+## Music software menu
+AddToMenu MusicMenu
+	Test (x audacious)	+	"Audacious "			exec audacious &
+AddToMenu RootMenu
+	+ "Workspace Menu "  Title
+	+ "Terminal " exec $FVWM_TERMINAL &
+	+ "" 			Nop
+	+ "Internet "	Popup SurfMenu
+	+ "Graphics "	Popup GfxMenu
+	+ "Music "	Popup MusicMenu
+	+ "Utils "	Popup UtilsMenu
+	+ "System "	Popup SysMenu
+	Test (x panther_launcher) + "All Apps " exec panther_launcher &
+Style Toolchest Title, !Handles, BorderWidth 2, !Button 1, !Button 2, !Button 4, !Closable, Sticky, !StickyStippledTitle, WindowListSkip, !Closable
+Style FvwmButtons Title, !Handles, !Button 1, !Button 2, !Button 4, Sticky, !StickyStippledTitle, WindowListSkip, !Closable
+*Toolchest: Columns 1
+*Toolchest: Rows 6
+*Toolchest: BoxSize smart
+*Toolchest: Padding 11 0
+*Toolchest: Frame 1
+*Toolchest: Font "-*-helvetica-bold-*-*-*-14-*-*-*-*-*-*-*"
+*Toolchest: ButtonGeometry 120x26+5+5
+*Toolchest: (Right, Title (Side, Left) "System ", Icon toolIcon.xpm, Action (Mouse 1) \
+    	`Menu SysMenu rectangle $widthx$height+$left+$top  +$widthp-5p +1p`)
+*Toolchest: (Right, Icon toolIcon.xpm, Title (Side, Left) "Graphics ", Action (Mouse 1) \
+	`Menu GfxMenu rectangle $widthx$height+$left+$top +$widthp-5p +1p`)
+*Toolchest: (Right, Icon toolIcon.xpm, Title (Side, Left) "Utilities ", Action (Mouse 1) \
+    	`Menu UtilsMenu rectangle $widthx$height+$left+$top  +$widthp-5p +1p`)
+*Toolchest: (Right, Icon toolIcon.xpm, Title (Side, Left) "Internet ", Action (Mouse 1) \
+    	`Menu SurfMenu rectangle $widthx$height+$left+$top  +$widthp-5p +1p`)
+*Toolchest: (Right, Title (Side, Left) "Music ", Icon toolIcon.xpm, Action (Mouse 1) \
+    	`Menu MusicMenu rectangle $widthx$height+$left+$top  +$widthp-5p +1p`)
+*Toolchest: (Right, Title (Side, Left) "Terminal ", Action (Mouse 1) \
+    	`exec $FVWM_TERMINAL &`)
+IconFont              "-*-helvetica-medium-r-*-*-14-*-*-*-*-*-*-*"
+# icon box
+# XXX: you may need to adjust the size here
+Style * IconBox 1680x305+135+6, IconGrid 1 1, IconFill Left Top
+Style * IconSize 90 70 -1 -1
+Style * IconBackgroundRelief 2
+Style * IconBackgroundPadding 2
+Style * IconBackgroundRelief 2
+## Set path to icons and pixmaps
+ImagePath $HOME/.fvwm/icons:+
+# A few icons ripped from SGI screenshots
+Style "*" Icon iconbox/generic.png
+# generic icons
+Style "FvwmPager"       IconOverride, Icon iconbox/iconbox.png
+# terminal icons
+Style "Xfce4-terminal"	IconOverride, Icon iconbox/term.png
+Style "qterminal"		IconOverride, Icon iconbox/term.png
+Style "*rxvt"			IconOverride, Icon iconbox/term.png
+Style "st"				IconOverride, Icon iconbox/term.png
+Style "Nvidia-settings" IconOverride, Icon iconbox/nvidia.png
+Style "XOsview"         IconOverride, Icon iconbox/sysmon.png
+Style "Blender"         IconOverride, Icon iconbox/Blender.png
+Style "xfontsel"        IconOverride, Icon iconbox/xfontsel.png
+Style "Audacious"       IconOverride, Icon iconbox/xmms.png
+Style "Pavucontrol"     IconOverride, Icon iconbox/mixer.png
+Style "Galculator"      IconOverride, Icon iconbox/Gcalctool.png
+Style "Emacs"           IconOverride, Icon iconbox/edit.png
+Style "Zutty"           IconOverride, Icon iconbox/term.png
+# text editors
+Style "*NEdit"          IconOverride, Icon iconbox/textedit.png
+# file managers
+Style "Thunar"          IconOverride, Icon iconbox/filemanager.png
+############################################################################
+# Pager
+#   FvwmPager can actually be configured to look a bit more like
+#   4dwm's desk overview, but I like the default compact look better.
+############################################################################
+*FvwmPager: Geometry 383x120-0-36
+*FvwmPagerLabel FvwmPager
+*FvwmPagerSmallFont "-*-helvetica-medium-r-*-*-8-*-*-*-*-*-*-*"
+*FvwmPager: LabelsAbove
+*FvwmPager: NoMiniIcons
+*FvwmPagerFont "-*-helvetica-bold-o-*-*-12-*-*-*-*-*-*-*"
+*FvwmPager: Window3DBorders
+*FvwmPager: WindowBorderWidth 2
+*FvwmPager: Balloons All
+*FvwmPager: BalloonYOffset +2
+*FvwmPager: BalloonBorderWidth 1
+*FvwmPager: UseSkipList
+*FvwmPager: DeskHilight
+############################################################################
+# Mouse bindings
+############################################################################
+## The below line will disable the root menu completely
+#Mouse 1	R   	A       Nop
+## Enable root menu by left click
+Mouse 1		R   	A       Menu RootMenu Nop
+# Right click for window ops menu
+# Middle click for window list 
+Mouse 3		R    	A       Menu Window-Ops Nop
+Mouse 2		R    	A      	WindowList NoIcons
+# Left click is the Window-Ops2 menu, right is iconify, rightmost is maximize
+Mouse 0		1       A       Menu Window-Ops2 Close
+Mouse 0		2    	A     	Maximize
+Mouse 0		4    	A     	Iconify
+# Left click in Frame or Sides is a resize-or-raise
+# and on Top does a move-or-raise
+Mouse 1 	FS      A       Resize-or-Raise
+Mouse 1		T       A       Maximize-or-Move
+# Left click in an Icon is de-iconify
+Mouse 1		I       A       Iconify off
+# Middle click in Corners/Sides/Titlebar gets Ops Menu
+Mouse 2 	FST     A       Menu Window-Ops2 Nop
+# Right mouse click toggles raise-lower on anything
+Mouse 3 	TSIF    A       RaiseLower
+# Click-and-drag to move (LMB) and resize (RMB) with Super
+# Clicking simply raises the windo
+DestroyFunc DragNMoveWithRaise
+AddToFunc DragNMoveWithRaise
++ H Raise
++ H Move
+Mouse 1 W 4 DragNMoveWithRaise
+DestroyFunc DragNMoveWithoutRaise
+AddToFunc DragNMoveWithoutRaise
++ H Move
+Mouse 1 W C4 DragNMoveWithoutRaise
+DestroyFunc DragNSize
+AddToFunc DragNSize H Resize
+Mouse 3 W 4 DragNSize
+# Thumbnail overrides for iconify
+Mouse ("Chromium") 1		I       A       Iconify off
+Mouse ("Chromium") 0		4    	A     	Iconify
+############################################################################
+# Keyboard bindings
+############################################################################
+# Don't refuse if I accidentally have NumLock and ScrollLock on!
+IgnoreModifiers L25
+# Move between pages (Super+{up, down, left, right})
+Key Left	A	4	Scroll -100 0
+Key Right	A	4	Scroll +100  +0
+Key Up		A	4	Scroll +0 -100
+Key Down	A	4	Scroll +0 +100
+# Move between desktops (Ctrl+Super+{up, down})
+Key Left		A	C4	GotoDesk -1 0 2
+Key Right	A	C4	GotoDesk  1 0 2
+## Fast Alt-Tab
+# Key Tab A 4 WindowList Root c c CurrentDesk, NoGeometry, CurrentAtEnd, IconifiedAtEnd, NoIcons
+# Key Tab A 4 WindowList Root c c NoDeskSort, SelectOnRelease Super_L, SelectOnRelease Alt_L, CurrentAtEnd, IconifiedAtEnd
+Key Tab A M WindowList Root c c NoDeskSort, SelectOnRelease Alt_L, CurrentAtEnd, IconifiedAtEnd
+# Fast page switch (Super+{1..6})
+Key	1	A	S4	GotoPage 0 0
+Key	2	A	S4	GotoPage 1 0
+Key	3	A	S4	GotoPage 0 1
+Key	4	A	S4	GotoPage 1 1
+Key	5	A	S4	GotoPage 0 2
+Key	6	A	S4	GotoPage 1 2
+# Fast desktop switch (Shift+Super+{1..9)
+Key	1	A	4	GotoDesk 0 0
+Key	2	A	4	GotoDesk 0 1
+Key	3	A	4	GotoDesk 0 2
+Key	4	A	4	GotoDesk 0 3
+Key	5	A	4	GotoDesk 0 4
+Key	6	A	4	GotoDesk 0 5
+Key	7	A	4	GotoDesk 0 6
+Key	8	A	4	GotoDesk 0 7
+Key	9	A	4	GotoDesk 0 8
+# Close a window (Super+Q)
+Key Q	A	4 Close
+# Iconify a window (Super M)
+Key M	W	4 Iconify
+Key M	I	4 Iconify Off
+# Thumbnail overrides for iconify
+Key ("Chromium") M	W	4 Iconify
+Key ("Chromium") M	I	4 Iconify off
+Key h A S4 AnimatedMove w-10 keep ewmhiwa
+Key j A S4 AnimatedMove keep w10 ewmhiwa
+Key k A S4 AnimatedMove keep w-10 ewmhiwa
+Key l A S4 AnimatedMove w10 keep ewmhiwa
+DestroyFunc ScrollAndRefocus
+AddToFunc ScrollAndRefocus
++ I Scroll $0 $1
++ I All (CurrentPage, Focused, !Iconic) FlipFocus NoWarp
++ I TestRc (NoMatch) Prev (CurrentPage, AcceptsFocus, !Iconic) FlipFocus NoWarp
+Key h A 4 ScrollAndRefocus -25 0
+Key j A 4 ScrollAndRefocus +0 +50
+Key k A 4 ScrollAndRefocus +0 -50
+Key l A 4 ScrollAndRefocus +25 +0
+# 4dwm-like colors
+Style * Color black gray50
+Style *	HilightFore black
+Style * HilightBack #A59F80
+Colorset 11 fg black, bg gray80
+Colorset 12 fg #111111, bg gray60
+Colorset 17 fg black, bg #808080, pixmap overlay.png
+*FvwmPagerBack gray65
+*FvwmPagerFore black
+*FvwmPagerHilight White
+# dark mode
+# if using this config, make sure to change icons/toolIcon.xpm
+# use a text editor to open it and change the line that says ".	c black" to ". c white"
+#Style * Color white gray20
+#Style *	HilightFore white
+#Style * HilightBack #304F55
+#Colorset 11 fg white, bg gray30
+#Colorset 12 fg white, bg gray20
+#Colorset 17 fg white, bg gray30, pixmap overlay.png
+#*FvwmPagerBack gray40
+#*FvwmPagerFore black
+#*FvwmPagerHilight White
+# Components
+MenuStyle * MenuColorset 11
+*Toolchest: Colorset 11
+*FvwmPager: WindowColorsets 17 2
+# Icons
+Style * IconBackgroundColorset 17
+AddToFunc "InitFunction"
++ I Module FvwmPager 0 $[FVWM_DESKTOP_UPPERBOUND]
++ I Module FvwmButtons Toolchest
+# Restart Toolchest and Pager on WM restart
+AddToFunc "RestartFunction"
++ I Module FvwmPager 0 $[FVWM_DESKTOP_UPPERBOUND]
++ I Module FvwmButtons Toolchest
+# add enhancement apps that don't need to have their own desktop files
+AddToFunc "InitFunction"
+# ----digital clock----
++ I Exec xclock -digital -strftime "%Y.%m.%d, %H:%M.%S" -update 1 -bg gray -face "Helvetica 18:Bold:pixelsize=21" -geometry +0-0 &
+# dark mode
+#+ I Exec xclock -digital -strftime "%Y.%m.%d, %H:%M.%S" -update 1 -bg black -fg white -face "Helvetica 18:Bold:pixelsize=21" -geometry +0-0 &
+# ----import xfce4 settings----
+Test (x xfsettingsd) + I Exec xfsettingsd &
+Test (x xfce4-power-manager) + I Exec xfce4-power-manager &
+# ----tray----
++ I Exec stalonetray -geometry "16x1-14-14" --kludges=force_icons_size &
+# dark mode
+#+ I Exec stalonetray -geometry "16x1-14-14" -bg "#222" --kludges=force_icons_size &
+# ----background----
+# xsetroot will be used as a fallback
++ I Exec xsetroot -solid "#4c719e"
+Test (x hsetroot) + I Exec hsetroot -tile "$HOME/.fvwm/wallpapers/Scatter Blue.png" &
+# FvwmButtons icon launcher:
+DestroyFunc Launcher
+AddToFunc Launcher
++ I DestroyModuleConfig $0Launch: *
++ I *$0Launch: Geometry 80x75
++ I *$0Launch: Columns 1
++ I *$0Launch: Rows    4
++ I *$0Launch: Frame   0
++ I *$0Launch: Back    transparent
++ I *$0Launch: (1x3+0+0, Icon $1, Action (Mouse 1) `Exec exec $2`)
++ I *$0Launch: Pixmap none
++ I *$0Launch: (1x1+0+3, Font "-adobe-helvetica-medium-o-normal--14-140-75-75-p-78-iso8859-1", \
+                Colorset 12, Title $0, Action (Mouse 1) `Exec exec $2`)
++ I Style $0Launch HandleWidth 0, NoTitle, WindowListSkip
+# do the stuff i guess iunno
++ I Module FvwmButtons -g "-$[LAUNCHER_OFFSET_FROM_RIGHT]+$[LAUNCHER_OFFSET_FROM_TOP]" $0Launch
++ I UpdateStyles
+# calculate next launcher offset
++ I PipeRead `printf "SetEnv LAUNCHER_OFFSET_FROM_TOP "; expr $[LAUNCHER_OFFSET_FROM_TOP] + 100`
+DestroyFunc NextLauncherColumn
+AddToFunc NextLauncherColumn
++ I PipeRead `printf "SetEnv LAUNCHER_OFFSET_FROM_RIGHT "; expr $[LAUNCHER_OFFSET_FROM_RIGHT] + 90`
++ I PipeRead `printf "SetEnv LAUNCHER_OFFSET_FROM_TOP $[LAUNCHER_OFFSET_FROM_TOP_INIT]"`
+# initialize position
+	SetEnv LAUNCHER_OFFSET_FROM_RIGHT_INIT "-70"
+	SetEnv LAUNCHER_OFFSET_FROM_TOP_INIT   "10"
+	SetEnv LAUNCHER_OFFSET_FROM_RIGHT $[LAUNCHER_OFFSET_FROM_RIGHT_INIT]
+# ------------ begin desktop launchers -----------------------------------
+# format: Launcher [name] [launcher image relative to ~/.fvwm/icons/] [terminal command]
+	NextLauncherColumn
+	Launcher desktop    launchers/desktop.png  "exo-open --launch FileManager $(xdg-user-dir DESKTOP)"
+	Launcher home       launchers/folder.png   "exo-open --launch FileManager ~"
+	Launcher UnixRoot   launchers/folder.png   "exo-open --launch FileManager /"
+	Launcher dumpster   launchers/dumpster.png "zutty -e nnn /tmp"
+	
+	Test (x xosview) \
+		Launcher Xosview    launchers/xosview.png  "xosview"
+	Test (x galculator) \
+		Launcher calculator launchers/xcalc.png    "galculator"
+	Test (x xnedit) \
+		Launcher Xnedit      launchers/nedit.png    "xnedit"
+	Test (x featherpad) \
+		Launcher FeatherPad launchers/jot.png      "featherpad"
+
+
+Explain this fvwm config file thoroughly. Especially where it defines the window placement mode that forces the user to place the window.
